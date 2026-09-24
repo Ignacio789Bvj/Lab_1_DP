@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+
 SRC_DIR = Path(__file__).resolve().parent / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -30,6 +31,7 @@ from config import (  # noqa: E402
     DEFAULT_RANK_MODE,
     DEFAULT_TARGET,
     DEFAULT_WEIGHT_DECAY,
+    HYPERPARAMETER_GRID,   # agregamos el GRID
     TARGET_COLUMNS,
 )
 from data_loader import CognitiveDataset, load_dataframe  # noqa: E402
@@ -39,7 +41,9 @@ from evaluation import (  # noqa: E402
     compute_confusion_matrix,
     format_classification_report,
 )
-from models import ShallowMultiClassNet  # noqa: E402
+from losses import coral_loss, effective_number_weights  # noqa: E402
+from models import MLPCoral, ShallowMultiClassNet  # noqa: E402
+from ordinal import logits_to_ordinal_predictions  # noqa: E402
 from preprocessing import prepare_experiment_data, split_for_validation  # noqa: E402
 from reporting import (  # noqa: E402
     experiment_to_row,
@@ -150,11 +154,11 @@ def train_one_epoch(
 
     return total_loss / len(loader.dataset)
 
-
 def evaluate_model(
     model: nn.Module,
     loader: DataLoader,
     device: torch.device,
+    algorithm: str = "Softmax",  # default no rompe llamadas existentes
 ) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
     """Evalua el modelo y devuelve metricas, etiquetas y predicciones."""
 
@@ -166,7 +170,14 @@ def evaluate_model(
         for inputs, targets in loader:
             inputs = inputs.to(device)
             logits = model(inputs)
-            predictions = logits.argmax(dim=1).cpu().numpy()
+
+            # Softmax devuelve (B, K) -> argmax da la clase directa
+            # CORAL devuelve (B, K-1) -> argmax seria erroneo, hay que contar umbrales
+            if algorithm == "CORAL":
+                # Cuenta cuantos sigmoid(z_k) > 0.5 -> (B,) en 0..K-1
+                predictions = logits_to_ordinal_predictions(logits).cpu().numpy()
+            else:
+                predictions = logits.argmax(dim=1).cpu().numpy()
 
             all_predictions.append(predictions)
             all_targets.append(targets.numpy())
@@ -174,7 +185,6 @@ def evaluate_model(
     y_pred = np.concatenate(all_predictions)
     y_true = np.concatenate(all_targets)
     return compute_all_metrics(y_true, y_pred), y_true, y_pred
-
 
 def run_training_cycle(
     X_train: np.ndarray,
@@ -190,6 +200,9 @@ def run_training_cycle(
     epochs: int,
     seed: int,
     device: torch.device,
+    algorithm: str = "Softmax",
+    use_weights: bool = False,
+    beta: float = 0.99,
 ) -> dict:
     """Entrena y evalua una configuracion puntual del modelo."""
 
@@ -202,14 +215,36 @@ def run_training_cycle(
         X_eval, y_eval, batch_size=batch_size, shuffle=False, seed=seed
     )
 
-    model = ShallowMultiClassNet(
-        input_dim=X_train.shape[1],
-        hidden_dim=hidden_dim,
-        dropout=dropout,
-        output_dim=num_classes,
-    ).to(device)
+    # Modelo segun algoritmo
+    if algorithm == "CORAL":
+        model = MLPCoral(
+            num_features=X_train.shape[1],
+            num_classes=num_classes,
+            dropout=dropout,
+        ).to(device)
+    else:
+        model = ShallowMultiClassNet(
+            input_dim=X_train.shape[1],
+            hidden_dim=hidden_dim,
+            dropout=dropout,
+            output_dim=num_classes,
+        ).to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    # Pesos por desbalance (solo CORAL)
+    class_weights = None
+    if algorithm == "CORAL" and use_weights:
+        class_weights = effective_number_weights(
+            y_train, num_classes, beta=beta
+        ).to(device)
+
+    # Perdida segun algoritmo: CE para Softmax, BCE ordinal para CORAL
+    if algorithm == "CORAL":
+        criterion = lambda logits, y: coral_loss(  # noqa: E731
+            logits, y, num_classes, class_weights
+        )
+    else:
+        criterion = nn.CrossEntropyLoss()
+
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=learning_rate,
@@ -221,7 +256,9 @@ def run_training_cycle(
         epoch_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
         history.append(epoch_loss)
 
-    metrics, y_true, y_pred = evaluate_model(model, eval_loader, device=device)
+    metrics, y_true, y_pred = evaluate_model(
+        model, eval_loader, device=device, algorithm=algorithm
+    )
 
     return {
         "model": model,
@@ -231,7 +268,6 @@ def run_training_cycle(
         "y_pred": y_pred,
         "final_train_loss": history[-1],
     }
-
 
 def train_one_experiment(
     data_path: str | Path,
@@ -246,6 +282,9 @@ def train_one_experiment(
     inner_folds: int = DEFAULT_INNER_FOLDS,
     seed: int = DEFAULT_RANDOM_SEED,
     device_name: str = "cpu",
+    algorithm: str = "Softmax",      
+    use_weights: bool = False,       
+    beta: float = 0.99,               
 ) -> dict:
     """
     Ejecuta el flujo de validacion anidada del laboratorio.
@@ -291,37 +330,70 @@ def train_one_experiment(
 
         inner_mae_scores = []
         inner_qwk_scores = []
-        # TODO(alumno): recorrer HYPERPARAMETER_GRID aqui.
-        # Para cada configuracion, promediar MAE y QWK sobre estos folds
-        # internos. Quedarse con la de menor MAE; empate: mayor QWK.
-        # No usar el fold externo de prueba para elegir hiperparametros.
-        # No reportar el mejor fold interno como resultado final.
+        #
+        best_cfg = {
+            "hidden_dim": hidden_dim,
+            "dropout": dropout,
+            "learning_rate": learning_rate,
+            "weight_decay": weight_decay,
+        }
+
         if can_make_stratified_splits(y_outer_train, inner_folds):
             inner_splits = split_for_validation(
                 y_outer_train,
                 n_splits=inner_folds,
                 random_state=seed + outer_fold_index,
             )
-            for inner_fold_index, (inner_train_idx, inner_val_idx) in enumerate(
-                inner_splits, start=1
-            ):
-                inner_result = run_training_cycle(
-                    X_train=X_outer_train[inner_train_idx],
-                    y_train=y_outer_train[inner_train_idx],
-                    X_eval=X_outer_train[inner_val_idx],
-                    y_eval=y_outer_train[inner_val_idx],
-                    num_classes=num_classes,
-                    hidden_dim=hidden_dim,
-                    dropout=dropout,
-                    learning_rate=learning_rate,
-                    weight_decay=weight_decay,
-                    batch_size=batch_size,
-                    epochs=epochs,
-                    seed=seed + outer_fold_index * 100 + inner_fold_index,
-                    device=device,
-                )
-                inner_mae_scores.append(inner_result["metrics"]["mae_ordinal"])
-                inner_qwk_scores.append(inner_result["metrics"]["qwk"])
+
+            # ahora se recorre el GRID que menciona el TODO
+            grid_results = []
+            for cfg_index, cfg in enumerate(HYPERPARAMETER_GRID):
+                cfg_mae = []
+                cfg_qwk = []
+                for inner_fold_index, (inner_train_idx, inner_val_idx) in enumerate(
+                    inner_splits, start=1
+                ):
+                    inner_result = run_training_cycle(# se agregaron los que faltaban
+                        X_train=X_outer_train[inner_train_idx],
+                        y_train=y_outer_train[inner_train_idx],
+                        X_eval=X_outer_train[inner_val_idx],
+                        y_eval=y_outer_train[inner_val_idx],
+                        num_classes=num_classes,
+                        hidden_dim=cfg.get("hidden_dim", hidden_dim),         
+                        dropout=cfg.get("dropout", dropout),                  
+                        learning_rate=cfg.get("learning_rate", learning_rate),
+                        weight_decay=cfg.get("weight_decay", weight_decay),   
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        seed=seed + outer_fold_index * 100 + cfg_index * 10 + inner_fold_index,
+                        device=device,
+                        algorithm=algorithm,                                  
+                        use_weights=use_weights,                              
+                        beta=cfg.get("beta", beta),                           
+                    )
+                    cfg_mae.append(inner_result["metrics"]["mae_ordinal"])    # metricas de mae 
+                    cfg_qwk.append(inner_result["metrics"]["qwk"])            # metricas de de qwk
+
+                # promedio del MAE y del QWK
+                grid_results.append({
+                    "cfg": cfg,
+                    "mae": float(np.mean(cfg_mae)),
+                    "qwk": float(np.mean(cfg_qwk)),
+                })
+
+            #
+            best_row = min(grid_results, key=lambda r: (r["mae"], -r["qwk"]))
+            best_cfg = best_row["cfg"]
+            inner_mae_scores = [r["mae"] for r in grid_results]
+            inner_qwk_scores = [r["qwk"] for r in grid_results]
+            print(                                                            # literalmente menciona cual es mejor
+                f"  Mejor config fold {outer_fold_index}: "
+                f"hidden={best_cfg.get('hidden_dim')}, "
+                f"dropout={best_cfg.get('dropout')}, "
+                f"lr={best_cfg.get('learning_rate')}, "
+                f"wd={best_cfg.get('weight_decay')} | "
+                f"MAE interno={best_row['mae']:.4f}"
+            )
         else:
             print(
                 f"Aviso: el fold externo {outer_fold_index} de {target_name} "
@@ -329,23 +401,24 @@ def train_one_experiment(
                 "(clase rara). Se omite la validacion interna en este fold."
             )
 
-        # Esta plantilla reentrena la configuracion fija con todo el
-        # entrenamiento externo. Cuando el grid este activo, reentrenar
-        # aqui la configuracion elegida por MAE interno.
+        # reentrena con el cfg
         final_result = run_training_cycle(
             X_train=X_outer_train,
             y_train=y_outer_train,
             X_eval=X_outer_test,
             y_eval=y_outer_test,
             num_classes=num_classes,
-            hidden_dim=hidden_dim,
-            dropout=dropout,
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
+            hidden_dim=best_cfg.get("hidden_dim", hidden_dim),          
+            dropout=best_cfg.get("dropout", dropout),                   
+            learning_rate=best_cfg.get("learning_rate", learning_rate), 
+            weight_decay=best_cfg.get("weight_decay", weight_decay),    
             batch_size=batch_size,
             epochs=epochs,
             seed=seed + outer_fold_index * 1000,
             device=device,
+            algorithm=algorithm,                                        
+            use_weights=use_weights,                                    
+            beta=best_cfg.get("beta", beta),                            
         )
 
         outer_results.append(
@@ -407,9 +480,8 @@ def train_one_experiment(
         "last_fold_confusion": compute_confusion_matrix(
             last_fold["y_true"], last_fold["y_pred"]
         ),
-        "algorithm": DEFAULT_ALGORITHM,
+        "algorithm": algorithm,  #ya no es el default
     }
-
 
 def can_make_stratified_splits(y: np.ndarray, n_splits: int) -> bool:
     """True si StratifiedKFold puede respetar n_splits."""
@@ -595,6 +667,22 @@ def build_argument_parser() -> argparse.ArgumentParser:
         choices=["auto", "max", "min"],
         help="auto minimiza MAE y errores graves; maximiza el resto.",
     )
+    parser.add_argument(
+        "--coral",
+        action="store_true",
+        help="Usar cabeza CORAL en lugar de Softmax.",
+    )
+    parser.add_argument(
+        "--use-weights",
+        action="store_true",
+        help="Pesos por numero efectivo de muestras (solo CORAL).",
+    )
+    parser.add_argument(
+        "--beta",
+        type=float,
+        default=0.99,
+        help="Beta para effective_number_weights (solo con --use-weights).",
+    )
     return parser
 
 
@@ -625,7 +713,8 @@ def main() -> None:
             args.gds_inner_folds,
             args.all_targets,
         )
-        print(f"\n=== {DEFAULT_ALGORITHM} / {target_name} ===")
+        algo_label = "CORAL" if args.coral else "Softmax"# dice que se ocupó
+        print(f"\n=== {algo_label} / {target_name} ===")#imprime el nombre
         results = train_one_experiment(
             data_path=args.data_path,
             target_name=target_name,
@@ -639,9 +728,17 @@ def main() -> None:
             inner_folds=inner_folds,
             seed=args.seed,
             device_name=args.device,
+            algorithm="CORAL" if args.coral else "Softmax",        # menciona si es coral o soft max
+            use_weights=args.use_weights,                          # menciona los pesos
+            beta=args.beta,                                        # menciona los beta
         )
         print_experiment_results(results)
-        rows.append(experiment_to_row(results, algorithm=DEFAULT_ALGORITHM))
+        rows.append(                                              
+            experiment_to_row(                                    # menciona a que exp comrresponde la row
+                results,                                          
+                algorithm="CORAL" if args.coral else "Softmax",   
+            )                                                     
+        )                                                        
         confusion_by_target[target_name] = results["last_fold_confusion"]
 
     rank_mode = resolve_rank_mode(args.rank_metric, args.rank_mode)
@@ -666,12 +763,7 @@ def main() -> None:
     print(f"\nReportes escritos en {args.output_dir}/")
     for name, path in paths.items():
         print(f"  {name}: {path}")
-    print(
-        "TODO: activar HYPERPARAMETER_GRID en el loop interno, "
-        "implementar CORAL y pesos por clase. Las tablas ya aceptan "
-        "una columna algorithm para comparar metodos."
-    )
-
+ 
 
 if __name__ == "__main__":
     main()

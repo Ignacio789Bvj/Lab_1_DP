@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ShallowMultiClassNet(nn.Module):
@@ -39,9 +40,8 @@ class ShallowMultiClassNet(nn.Module):
         return logits
 
 
-class CoralLayer(nn.Module):
+class CoralLayer(nn.Module):# Sirve para no calcular las gradientes en cada batch
     """
-    TODO(alumno):
     Capa de salida CORAL.
 
     Debe producir K-1 logits acumulativos a partir de un vector de
@@ -58,14 +58,19 @@ class CoralLayer(nn.Module):
     - salida: (batch_size, num_classes - 1)
     """
 
-    def __init__(self, input_size: int, num_classes: int) -> None:
+    def __init__(self, input_size: int, num_classes: int) -> None: #Define las capas y parametrod de la gradiente
         super().__init__()
         self.input_size = input_size
         self.num_classes = num_classes
+        self.fc = nn.Linear(input_size, 1, bias=False)  # proyección compartida w^T h
+        self.bias = nn.Parameter(torch.zeros(num_classes - 1))  # K-1 umbrales base
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("TODO: implementar CoralLayer.forward().")
-
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:#operaciones que hará x cada batch
+        s = self.fc(inputs)  # (B, 1) puntaje latente compartido
+        # Sesgos ordenados: softplus (positivo) + cumsum garantiza b0 >= b1 >= ... >= bK-2
+        b = torch.cumsum(F.softplus(self.bias), dim=0)  # (K-1,)
+        logits = s + b.unsqueeze(0)  # (B, K-1) broadcast
+        return logits
 
 class MLPCoral(nn.Module):
     """
@@ -80,16 +85,25 @@ class MLPCoral(nn.Module):
     El forward debe devolver logits de forma (batch_size, K-1).
     """
 
-    def __init__(
-        self,
-        num_features: int,
-        num_classes: int,
-        dropout: float = 0.15,
-    ) -> None:
+    def __init__(self, num_features: int, num_classes: int, dropout: float = 0.15) -> None:
         super().__init__()
         self.num_features = num_features
         self.num_classes = num_classes
-        self.dropout = dropout
+
+        # Bloque de features: extrae representación de las 15 entradas binarias
+        self.features = nn.Sequential(
+            nn.Linear(num_features, 32),  # 15 -> 32, expande
+            nn.BatchNorm1d(32),           # estabiliza el entrenamiento
+            nn.ReLU(),                    # no linealidad
+            nn.Dropout(dropout),          # regulariza (apaga neuronas al azar)
+            nn.Linear(32, 16),            # 32 -> 16, comprime
+            nn.ReLU(),                    # no linealidad
+        )
+
+        # Cabeza ordinal: 16 features -> K-1 logits ordenados
+        self.coral = CoralLayer(16, num_classes)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("TODO: implementar MLPCoral.forward().")
+        # features: (B, 15) -> (B, 16)
+        # coral:    (B, 16) -> (B, K-1)
+        return self.coral(self.features(inputs))

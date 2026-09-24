@@ -2,6 +2,7 @@
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 def labels_to_levels(labels: torch.Tensor, num_classes: int) -> torch.Tensor:
@@ -16,9 +17,12 @@ def labels_to_levels(labels: torch.Tensor, num_classes: int) -> torch.Tensor:
     - labels: (batch_size,)
     - salida: (batch_size, num_classes - 1)
     """
+    labels = labels.long()#No choque de int 
+    thresholds = torch.arange(num_classes - 1, device=labels.device)# k-1 fronteras y que se puedan procesar en el mismo espacio que los labels
+    levels = (labels.unsqueeze(1) > thresholds.unsqueeze(0)).float() # compara cada etiqueta vs cada umbral: 1 si y > k, si no 0
 
-    raise NotImplementedError("TODO: implementar labels_to_levels().")
 
+    return levels
 
 def coral_loss(
     logits: torch.Tensor,
@@ -27,7 +31,6 @@ def coral_loss(
     class_weights: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """
-    TODO(alumno):
     BCE con logits sobre los K-1 umbrales ordinales.
 
     Formas:
@@ -35,8 +38,11 @@ def coral_loss(
     - labels: (batch_size,)
     - class_weights: (num_classes,) o None
     """
-
-    raise NotImplementedError("TODO: implementar coral_loss().")
+    levels = labels_to_levels(labels, num_classes)  # (B, K-1) ya implementado
+    if class_weights is None:
+        return F.binary_cross_entropy_with_logits(logits, levels)  # BCE con sigmoide 
+    w = class_weights[labels].unsqueeze(1).expand_as(logits)  # peso por muestra replicado a (B, K-1)
+    return F.binary_cross_entropy_with_logits(logits, levels, weight=w)  # promedio ponderado x muestra
 
 
 def effective_number_weights(
@@ -45,7 +51,6 @@ def effective_number_weights(
     beta: float = 0.99,
 ) -> torch.Tensor:
     """
-    TODO(alumno):
     Pesos por numero efectivo de muestras:
 
         w_c = (1 - beta) / (1 - beta ** n_c)
@@ -56,5 +61,15 @@ def effective_number_weights(
     - labels: (N,)
     - salida: (num_classes,)
     """
+    counts = np.bincount(labels, minlength=num_classes)  # n_c por clase
+    n_c = torch.tensor(counts, dtype=torch.float32)  # No choque de int
+    # Evita división por cero si alguna clase no aparece
+    w = torch.where(
+        n_c > 0,
+        (1.0 - beta) / (1.0 - beta ** n_c),
+        torch.zeros_like(n_c)
+    )
+    w = w / w.mean()  # Media = 1
+    return w
 
-    raise NotImplementedError("TODO: implementar effective_number_weights().")
+    

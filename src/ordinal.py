@@ -20,5 +20,5 @@ def logits_to_ordinal_predictions(
     - logits: (batch_size, K-1)
     - salida: (batch_size,)
     """
-
-    raise NotImplementedError("TODO: implementar logits_to_ordinal_predictions().")
+    probs = torch.sigmoid(logits)                 # (B, K-1) probabilidades acumulativas
+    return (probs > threshold).sum(dim=1).long()  # (B,) en 0..K-1
