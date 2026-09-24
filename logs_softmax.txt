@@ -1,0 +1,313 @@
+nohup: ignoring input
+Modo --all-targets: se ignoran --target-name. GDS usa 2 folds externos y 2 internos.
+
+=== Softmax / GDS ===
+Aviso: el fold externo 1 de GDS no admite 2 folds internos estratificados (clase rara). Se omite la validacion interna en este fold.
+Aviso: el fold externo 2 de GDS no admite 2 folds internos estratificados (clase rara). Se omite la validacion interna en este fold.
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 2, 3, 4, 5, 6, 7]
+Folds: outer=2, inner=2
+Resumen externo (media +/- std):
+  accuracy: 0.5406 +/- 0.0344
+  balanced_accuracy: 0.2240 +/- 0.0214
+  precision_macro: 0.2138 +/- 0.0047
+  recall_macro: 0.2240 +/- 0.0214
+  f1_macro: 0.2046 +/- 0.0189
+  mae_ordinal: 0.5353 +/- 0.0443
+  qwk: 0.5340 +/- 0.0698
+  accuracy_pm1: 0.9357 +/- 0.0018
+  errores_graves: 0.0643 +/- 0.0018
+Fold externo 1: MAE interno = nan +/- nan, acc = 0.5750, F1_macro = 0.2235, MAE = 0.4911, err>=2 = 0.0625, loss final = 1.0844
+Fold externo 2: MAE interno = nan +/- nan, acc = 0.5063, F1_macro = 0.1858, MAE = 0.5796, err>=2 = 0.0662, loss final = 1.0767
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.0000    0.0000    0.0000        74
+           2     0.5622    0.8320    0.6710       250
+           3     0.3842    0.4564    0.4172       149
+           4     0.5833    0.1296    0.2121        54
+           5     0.0000    0.0000    0.0000        21
+           6     0.0000    0.0000    0.0000        10
+           7     0.0000    0.0000    0.0000         1
+
+    accuracy                         0.5063       559
+   macro avg     0.2185    0.2026    0.1858       559
+weighted avg     0.4102    0.5063    0.4318       559
+
+Matriz de confusion del ultimo fold externo:
+[[  0  73   1   0   0   0   0]
+ [  0 208  42   0   0   0   0]
+ [  0  81  68   0   0   0   0]
+ [  0   7  40   7   0   0   0]
+ [  0   1  17   3   0   0   0]
+ [  0   0   8   2   0   0   0]
+ [  0   0   1   0   0   0   0]]
+
+=== Softmax / GDS_R1 ===
+  Mejor config fold 1: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1140
+  Mejor config fold 2: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.1117
+  Mejor config fold 3: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1084
+  Mejor config fold 4: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.0961
+  Mejor config fold 5: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1083
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS_R1
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 2, 3]
+Folds: outer=5, inner=3
+Resumen externo (media +/- std):
+  accuracy: 0.8919 +/- 0.0303
+  balanced_accuracy: 0.4972 +/- 0.0415
+  precision_macro: 0.5166 +/- 0.0490
+  recall_macro: 0.4972 +/- 0.0415
+  f1_macro: 0.5048 +/- 0.0443
+  mae_ordinal: 0.1090 +/- 0.0303
+  qwk: 0.6153 +/- 0.0942
+  accuracy_pm1: 0.9991 +/- 0.0018
+  errores_graves: 0.0009 +/- 0.0018
+Fold externo 1: MAE interno = 0.1327 +/- 0.0224, acc = 0.9196, F1_macro = 0.5511, MAE = 0.0804, err>=2 = 0.0000, loss final = 0.2612
+Fold externo 2: MAE interno = 0.1257 +/- 0.0216, acc = 0.8973, F1_macro = 0.5058, MAE = 0.1027, err>=2 = 0.0000, loss final = 0.2823
+Fold externo 3: MAE interno = 0.1207 +/- 0.0194, acc = 0.8929, F1_macro = 0.5101, MAE = 0.1116, err>=2 = 0.0045, loss final = 0.2636
+Fold externo 4: MAE interno = 0.1036 +/- 0.0099, acc = 0.8348, F1_macro = 0.4227, MAE = 0.1652, err>=2 = 0.0000, loss final = 0.2289
+Fold externo 5: MAE interno = 0.1239 +/- 0.0156, acc = 0.9148, F1_macro = 0.5343, MAE = 0.0852, err>=2 = 0.0000, loss final = 0.2742
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.9350    0.9894    0.9614       189
+           2     0.7391    0.5667    0.6415        30
+           3     0.0000    0.0000    0.0000         4
+
+    accuracy                         0.9148       223
+   macro avg     0.5580    0.5187    0.5343       223
+weighted avg     0.8919    0.9148    0.9012       223
+
+Matriz de confusion del ultimo fold externo:
+[[187   2   0]
+ [ 13  17   0]
+ [  0   4   0]]
+
+=== Softmax / GDS_R2 ===
+  Mejor config fold 1: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.3006
+  Mejor config fold 2: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2894
+  Mejor config fold 3: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2950
+  Mejor config fold 4: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2883
+  Mejor config fold 5: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2701
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS_R2
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 2, 3]
+Folds: outer=5, inner=3
+Resumen externo (media +/- std):
+  accuracy: 0.7247 +/- 0.0362
+  balanced_accuracy: 0.6349 +/- 0.0415
+  precision_macro: 0.6820 +/- 0.0403
+  recall_macro: 0.6349 +/- 0.0415
+  f1_macro: 0.6492 +/- 0.0388
+  mae_ordinal: 0.2950 +/- 0.0431
+  qwk: 0.6858 +/- 0.0594
+  accuracy_pm1: 0.9803 +/- 0.0073
+  errores_graves: 0.0197 +/- 0.0073
+Fold externo 1: MAE interno = 0.3142 +/- 0.0108, acc = 0.7679, F1_macro = 0.6840, MAE = 0.2411, err>=2 = 0.0089, loss final = 0.6424
+Fold externo 2: MAE interno = 0.2910 +/- 0.0012, acc = 0.7188, F1_macro = 0.6346, MAE = 0.3036, err>=2 = 0.0223, loss final = 0.6165
+Fold externo 3: MAE interno = 0.3056 +/- 0.0116, acc = 0.7545, F1_macro = 0.6870, MAE = 0.2634, err>=2 = 0.0179, loss final = 0.6495
+Fold externo 4: MAE interno = 0.2950 +/- 0.0078, acc = 0.7188, F1_macro = 0.6590, MAE = 0.2991, err>=2 = 0.0179, loss final = 0.6105
+Fold externo 5: MAE interno = 0.2782 +/- 0.0050, acc = 0.6637, F1_macro = 0.5815, MAE = 0.3677, err>=2 = 0.0314, loss final = 0.6144
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.7450    0.8538    0.7957       130
+           2     0.4043    0.3220    0.3585        59
+           3     0.6667    0.5294    0.5902        34
+
+    accuracy                         0.6637       223
+   macro avg     0.6053    0.5684    0.5815       223
+weighted avg     0.6429    0.6637    0.6487       223
+
+Matriz de confusion del ultimo fold externo:
+[[111  17   2]
+ [ 33  19   7]
+ [  5  11  18]]
+
+=== Softmax / GDS_R3 ===
+  Mejor config fold 1: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.0938
+  Mejor config fold 2: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.0894
+  Mejor config fold 3: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.0905
+  Mejor config fold 4: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.0782
+  Mejor config fold 5: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.0938
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS_R3
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 3]
+Folds: outer=5, inner=3
+Resumen externo (media +/- std):
+  accuracy: 0.9098 +/- 0.0198
+  balanced_accuracy: 0.7707 +/- 0.0371
+  precision_macro: 0.8565 +/- 0.0497
+  recall_macro: 0.7707 +/- 0.0371
+  f1_macro: 0.8041 +/- 0.0406
+  mae_ordinal: 0.0902 +/- 0.0198
+  qwk: 0.6098 +/- 0.0810
+  accuracy_pm1: 1.0000 +/- 0.0000
+  errores_graves: 0.0000 +/- 0.0000
+Fold externo 1: MAE interno = 0.0952 +/- 0.0015, acc = 0.9196, F1_macro = 0.8218, MAE = 0.0804, err>=2 = 0.0000, loss final = 0.2292
+Fold externo 2: MAE interno = 0.0963 +/- 0.0121, acc = 0.9152, F1_macro = 0.8090, MAE = 0.0848, err>=2 = 0.0000, loss final = 0.2348
+Fold externo 3: MAE interno = 0.0964 +/- 0.0052, acc = 0.9196, F1_macro = 0.8359, MAE = 0.0804, err>=2 = 0.0000, loss final = 0.2457
+Fold externo 4: MAE interno = 0.0852 +/- 0.0067, acc = 0.8705, F1_macro = 0.7248, MAE = 0.1295, err>=2 = 0.0000, loss final = 0.2093
+Fold externo 5: MAE interno = 0.0963 +/- 0.0025, acc = 0.9238, F1_macro = 0.8290, MAE = 0.0762, err>=2 = 0.0000, loss final = 0.2300
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.9300    0.9841    0.9563       189
+           3     0.8696    0.5882    0.7018        34
+
+    accuracy                         0.9238       223
+   macro avg     0.8998    0.7862    0.8290       223
+weighted avg     0.9208    0.9238    0.9175       223
+
+Matriz de confusion del ultimo fold externo:
+[[186   3]
+ [ 14  20]]
+
+=== Softmax / GDS_R4 ===
+  Mejor config fold 1: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1754
+  Mejor config fold 2: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1709
+  Mejor config fold 3: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1687
+  Mejor config fold 4: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1765
+  Mejor config fold 5: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.1719
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS_R4
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 2, 3]
+Folds: outer=5, inner=3
+Resumen externo (media +/- std):
+  accuracy: 0.8347 +/- 0.0081
+  balanced_accuracy: 0.5124 +/- 0.0293
+  precision_macro: 0.5590 +/- 0.0350
+  recall_macro: 0.5124 +/- 0.0293
+  f1_macro: 0.5211 +/- 0.0275
+  mae_ordinal: 0.1653 +/- 0.0081
+  qwk: 0.2910 +/- 0.0443
+  accuracy_pm1: 1.0000 +/- 0.0000
+  errores_graves: 0.0000 +/- 0.0000
+Fold externo 1: MAE interno = 0.1835 +/- 0.0059, acc = 0.8482, F1_macro = 0.5656, MAE = 0.1518, err>=2 = 0.0000, loss final = 0.4378
+Fold externo 2: MAE interno = 0.1782 +/- 0.0070, acc = 0.8259, F1_macro = 0.5033, MAE = 0.1741, err>=2 = 0.0000, loss final = 0.4394
+Fold externo 3: MAE interno = 0.1771 +/- 0.0078, acc = 0.8304, F1_macro = 0.5135, MAE = 0.1696, err>=2 = 0.0000, loss final = 0.4278
+Fold externo 4: MAE interno = 0.1835 +/- 0.0064, acc = 0.8393, F1_macro = 0.5365, MAE = 0.1607, err>=2 = 0.0000, loss final = 0.4471
+Fold externo 5: MAE interno = 0.1794 +/- 0.0072, acc = 0.8296, F1_macro = 0.4867, MAE = 0.1704, err>=2 = 0.0000, loss final = 0.4355
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.0000    0.0000    0.0000        30
+           2     0.8295    0.9945    0.9045       181
+           3     0.8333    0.4167    0.5556        12
+
+    accuracy                         0.8296       223
+   macro avg     0.5543    0.4704    0.4867       223
+weighted avg     0.7181    0.8296    0.7641       223
+
+Matriz de confusion del ultimo fold externo:
+[[  0  30   0]
+ [  0 180   1]
+ [  0   7   5]]
+
+=== Softmax / GDS_R5 ===
+  Mejor config fold 1: hidden=32, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2168
+  Mejor config fold 2: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.2212
+  Mejor config fold 3: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.2201
+  Mejor config fold 4: hidden=64, dropout=0.15, lr=0.001, wd=0.0001 | MAE interno=0.2212
+  Mejor config fold 5: hidden=32, dropout=0.3, lr=0.001, wd=0.0001 | MAE interno=0.2243
+Experimento ejecutado correctamente.
+Algoritmo: Softmax
+Experimento activo: GDS_R5
+Dispositivo usado: cpu
+Forma de X: (1119, 15)
+Forma de y: (1119,)
+Clases encontradas: [1, 2, 3]
+Folds: outer=5, inner=3
+Resumen externo (media +/- std):
+  accuracy: 0.7766 +/- 0.0121
+  balanced_accuracy: 0.5135 +/- 0.0174
+  precision_macro: 0.5194 +/- 0.0232
+  recall_macro: 0.5135 +/- 0.0174
+  f1_macro: 0.5076 +/- 0.0185
+  mae_ordinal: 0.2234 +/- 0.0121
+  qwk: 0.4351 +/- 0.0317
+  accuracy_pm1: 1.0000 +/- 0.0000
+  errores_graves: 0.0000 +/- 0.0000
+Fold externo 1: MAE interno = 0.2251 +/- 0.0096, acc = 0.7679, F1_macro = 0.4921, MAE = 0.2321, err>=2 = 0.0000, loss final = 0.5678
+Fold externo 2: MAE interno = 0.2243 +/- 0.0035, acc = 0.7902, F1_macro = 0.5270, MAE = 0.2098, err>=2 = 0.0000, loss final = 0.6040
+Fold externo 3: MAE interno = 0.2304 +/- 0.0154, acc = 0.7589, F1_macro = 0.4798, MAE = 0.2411, err>=2 = 0.0000, loss final = 0.5903
+Fold externo 4: MAE interno = 0.2257 +/- 0.0034, acc = 0.7768, F1_macro = 0.5154, MAE = 0.2232, err>=2 = 0.0000, loss final = 0.5529
+Fold externo 5: MAE interno = 0.2288 +/- 0.0053, acc = 0.7892, F1_macro = 0.5236, MAE = 0.2108, err>=2 = 0.0000, loss final = 0.5772
+Reporte del ultimo fold externo:
+              precision    recall  f1-score   support
+
+           1     0.0000    0.0000    0.0000        30
+           2     0.7800    0.9811    0.8691       159
+           3     0.8696    0.5882    0.7018        34
+
+    accuracy                         0.7892       223
+   macro avg     0.5499    0.5231    0.5236       223
+weighted avg     0.6887    0.7892    0.7267       223
+
+Matriz de confusion del ultimo fold externo:
+[[  0  30   0]
+ [  0 156   3]
+ [  0  14  20]]
+
+Ranking F1_m (max):
+  1. Softmax / GDS_R3: 0.8041 ± 0.0406 <- mejor
+  2. Softmax / GDS_R2: 0.6492 ± 0.0388
+  3. Softmax / GDS_R4: 0.5211 ± 0.0275
+  4. Softmax / GDS_R5: 0.5076 ± 0.0185
+  5. Softmax / GDS_R1: 0.5048 ± 0.0443
+  6. Softmax / GDS: 0.2046 ± 0.0189
+Ranking MAE (min):
+  1. Softmax / GDS_R3: 0.0902 ± 0.0198 <- mejor
+  2. Softmax / GDS_R1: 0.1090 ± 0.0303
+  3. Softmax / GDS_R4: 0.1653 ± 0.0081
+  4. Softmax / GDS_R5: 0.2234 ± 0.0121
+  5. Softmax / GDS_R2: 0.2950 ± 0.0431
+  6. Softmax / GDS: 0.5353 ± 0.0443
+Ranking F1_m (max):
+  1. Softmax / GDS_R3: 0.8041 ± 0.0406 <- mejor
+  2. Softmax / GDS_R2: 0.6492 ± 0.0388
+  3. Softmax / GDS_R4: 0.5211 ± 0.0275
+  4. Softmax / GDS_R5: 0.5076 ± 0.0185
+  5. Softmax / GDS_R1: 0.5048 ± 0.0443
+  6. Softmax / GDS: 0.2046 ± 0.0189
+
+Reportes escritos en results_softmax/
+  resultados_csv: results_softmax/resultados.csv
+  resultados_md: results_softmax/resultados.md
+  ranking_f1_csv: results_softmax/ranking_f1.csv
+  ranking_f1_md: results_softmax/ranking_f1.md
+  ranking_mae_csv: results_softmax/ranking_mae.csv
+  ranking_mae_md: results_softmax/ranking_mae.md
+  ranking_custom_csv: results_softmax/ranking_f1_macro.csv
+  ranking_custom_md: results_softmax/ranking_f1_macro.md
+  plot_f1: results_softmax/barras_f1.png
+  plot_mae: results_softmax/barras_mae.png
+  plot_ranking: results_softmax/ranking_f1_macro.png
+  confusion_GDS: results_softmax/confusion_GDS.png
+  confusion_GDS_R1: results_softmax/confusion_GDS_R1.png
+  confusion_GDS_R2: results_softmax/confusion_GDS_R2.png
+  confusion_GDS_R3: results_softmax/confusion_GDS_R3.png
+  confusion_GDS_R4: results_softmax/confusion_GDS_R4.png
+  confusion_GDS_R5: results_softmax/confusion_GDS_R5.png
